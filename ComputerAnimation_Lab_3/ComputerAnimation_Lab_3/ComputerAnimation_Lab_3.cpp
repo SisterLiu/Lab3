@@ -10,7 +10,8 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 	WinProcedure winPro(hInstance, nCmdShow, 1280, 800);
 	Dx11Displayer caDisplayer(winPro.getHWND());
 	UserInput userInput;
-
+	userInput.setDisplayer(&caDisplayer);
+	
 	winPro.setDisplayer(&caDisplayer);
 	winPro.setUserInput(&userInput);
 

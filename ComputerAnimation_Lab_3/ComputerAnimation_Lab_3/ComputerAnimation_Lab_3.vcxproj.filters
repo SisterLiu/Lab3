@@ -30,6 +30,9 @@
     <ClCompile Include="userInput.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="model.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WinProcedure.h">
@@ -41,5 +44,13 @@
     <ClInclude Include="userInput.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="model.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="shader.fx">
+      <Filter>源文件</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>
