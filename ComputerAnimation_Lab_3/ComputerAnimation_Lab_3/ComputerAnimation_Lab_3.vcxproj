@@ -151,12 +151,14 @@
     <ClCompile Include="model.cpp" />
     <ClCompile Include="userInput.cpp" />
     <ClCompile Include="winProcedure.cpp" />
+    <ClCompile Include="WICTextureLoader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dx11Displayer.h" />
     <ClInclude Include="model.h" />
     <ClInclude Include="userInput.h" />
     <ClInclude Include="WinProcedure.h" />
+    <ClInclude Include="WICTextureLoader.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shader.fx">

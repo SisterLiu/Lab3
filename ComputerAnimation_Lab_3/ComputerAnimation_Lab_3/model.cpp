@@ -1,13 +1,18 @@
 #include "model.h"
+#include "Wincodec.h"
+#include "WICTextureLoader.h"
 
 //---------------------------------------------------------------------------
 //	Class Mesh
 //---------------------------------------------------------------------------
 
-Mesh::Mesh(aiMesh* pAiMesh)
+Mesh::Mesh(ID3D11Device* pDevice, ID3D11DeviceContext* pDeviceContext, const aiMesh* pAiMesh)
 {
 	numVertex = pAiMesh->mNumVertices;
 	numIndex = pAiMesh->mNumFaces * 3;
+
+	this->pDx11Device = pDevice;
+	this->pDx11DeviceContext = pDeviceContext;
 
 	//	Set the vertex & index buffer
 	MeshVertex* pVertexs = new MeshVertex[numVertex];
@@ -53,20 +58,71 @@ Mesh::Mesh(aiMesh* pAiMesh)
 	}
 
 	//------------------------------------------------------------------
-	//	Create Vertex
+	//	Create Vertex Buffer
 	//------------------------------------------------------------------
+	//	Set vertex buffer describe
+	D3D11_BUFFER_DESC vertexBufferDescribe;
+	ZeroMemory(&vertexBufferDescribe,sizeof(vertexBufferDescribe));
+	vertexBufferDescribe.Usage = D3D11_USAGE_DEFAULT;
+	vertexBufferDescribe.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	vertexBufferDescribe.ByteWidth = sizeof(MeshVertex) * numVertex;
+	vertexBufferDescribe.CPUAccessFlags = 0;
+	
+	//	Set vertex buffer data
+	D3D11_SUBRESOURCE_DATA vertexBufferData;
+	ZeroMemory(&vertexBufferData, sizeof(vertexBufferData));
+	vertexBufferData.pSysMem = pVertexs;
+	vertexBufferData.SysMemPitch = 0;
+	vertexBufferData.SysMemSlicePitch = 0;
 
+	//	Create Vertex Buffer
+	pDx11Device->CreateBuffer(&vertexBufferDescribe,&vertexBufferData,&pDx11VertexBuffer);
 
+	//------------------------------------------------------------------
+	//	Create Index Buffer
+	//------------------------------------------------------------------
+	//	Set index buffer describe
+	D3D11_BUFFER_DESC indexBufferDescribe;
+	ZeroMemory(&indexBufferDescribe, sizeof(indexBufferDescribe));
+	indexBufferDescribe.Usage = D3D11_USAGE_DEFAULT;
+	indexBufferDescribe.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	indexBufferDescribe.ByteWidth = sizeof(unsigned int) * numIndex;
+	indexBufferDescribe.CPUAccessFlags = 0;
 
+	//	Set index buffer data
+	D3D11_SUBRESOURCE_DATA indexBufferData;
+	ZeroMemory(&indexBufferData, sizeof(indexBufferData));
+	indexBufferData.pSysMem = pIndexs;
+	indexBufferData.SysMemPitch = 0;
+	indexBufferData.SysMemSlicePitch = 0;
+
+	//	Create Vertex Buffer
+	pDx11Device->CreateBuffer(&indexBufferDescribe, &indexBufferData, &pDx11IndexBuffer);
+
+	//------------------------------------------------------------------
+	//	Release vertex & index buffer
+	//------------------------------------------------------------------
+	delete[] pVertexs;
+	delete[] pIndexs;
 
 }
 
 Mesh::~Mesh()
 {
-
+	if(pDx11VertexBuffer) pDx11VertexBuffer->Release();
+	if(pDx11IndexBuffer) pDx11IndexBuffer->Release();
+	if(pTexture) pTexture->Release();
+	if(pDx11TextureView) pDx11TextureView->Release();
 }
 
-
+void Mesh::readTextureFromFile(LPWSTR file)
+{
+	CreateWICTextureFromFile(pDx11Device,
+		pDx11DeviceContext,
+		file,
+		&pTexture,
+		&pDx11TextureView);
+}
 
 
 

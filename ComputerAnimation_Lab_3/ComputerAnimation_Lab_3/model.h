@@ -8,6 +8,7 @@
 #include <directxmath.h>
 #include <directxcolors.h>
 #include <vector>
+#include <windows.h>
 
 struct MeshVertex
 {
@@ -21,7 +22,7 @@ class Mesh
 	public:
 		ID3D11Buffer* pDx11VertexBuffer;
 		ID3D11Buffer* pDx11IndexBuffer;
-		ID3D11Texture2D* pTexture;
+		ID3D11Resource* pTexture;
 		ID3D11ShaderResourceView* pDx11TextureView;
 		unsigned int numVertex;
 		unsigned int numIndex;
@@ -31,8 +32,13 @@ class Mesh
 		std::vector<Mesh> child;
 		D3D_PRIMITIVE_TOPOLOGY layout = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
-		Mesh(aiMesh*);
+		Mesh(ID3D11Device*, ID3D11DeviceContext*, const aiMesh*);
 		~Mesh();
+		void readTextureFromFile(LPWSTR file);
+
+	private:
+		ID3D11Device* pDx11Device;
+		ID3D11DeviceContext* pDx11DeviceContext;
 };
 
 
@@ -41,4 +47,19 @@ class Model
 
 };
 
-
+class Object
+{
+	public:
+		Mesh mesh;
+		DirectX::XMFLOAT3 pos;
+		DirectX::XMFLOAT3 angle;
+		float speed_x;
+		float speed_y;
+		float speed_z;
+		float rotation_x;
+		float rotation_y;
+		float rotation_z;
+	private:
+		ID3D11Device* pDx11Device;
+		ID3D11DeviceContext* pDx11DeviceContext;
+};
