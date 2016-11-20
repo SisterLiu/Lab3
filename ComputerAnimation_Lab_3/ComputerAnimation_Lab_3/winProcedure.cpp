@@ -1,13 +1,17 @@
 #include <windows.h>
 #include "WinProcedure.h"
+#include "Assimp/Importer.hpp"
+#include "Assimp/Scene.h"
+#include "Assimp/Postprocess.h"
 
 // private static varible
 HWND WinProcedure::hwnd = NULL;
 UserInput* WinProcedure::pUserInput = NULL;
 Dx11Displayer* WinProcedure::pDisplayer = NULL;
+Controller* WinProcedure::pController = NULL;
 int WinProcedure::screenX = 0;
 int WinProcedure::screenY = 0;
-
+std::vector<Object*> WinProcedure::objects;
 
 
 //--------------------------------------------------------------------------------------
@@ -105,10 +109,36 @@ void WinProcedure::setDisplayer(Dx11Displayer* pDP)
 	this->pDisplayer = pDP;
 }
 
+void WinProcedure::setController(Controller* pCtrl)
+{
+	this->pController = pCtrl;
+}
+
 HWND WinProcedure::getHWND()
 {
 	return hwnd;
 };
+
+void WinProcedure::initial()
+{
+	Assimp::Importer importer;
+	const aiScene* pAiScene = importer.ReadFile("./model/2/2.max", aiProcess_Triangulate | \
+		aiProcess_GenNormals | \
+		aiProcess_GenUVCoords| \
+		aiProcess_TransformUVCoords
+	);
+	const aiMesh* pAiMesh = pAiScene->mMeshes[0];
+
+	Mesh* pMesh = new Mesh(pDisplayer->getDevice(),pDisplayer->getContext(),pAiMesh);
+	pMesh->readTextureFromFile(L"./model/2/2.bmp");
+	Object* pNewObject = NULL;
+	for(int i = 0; i < 1; i++)
+	{
+		pNewObject = new Object();
+		pNewObject->pMesh = pMesh;
+		objects.push_back(pNewObject);
+	}
+}
 
 int WinProcedure::startLoop()
 {
@@ -123,8 +153,22 @@ int WinProcedure::startLoop()
 		}
 		else
 		{
-			pDisplayer->render60();
+			render60();
 		}
 	}
 	return (int)msg.wParam;
+}
+
+void WinProcedure::render60()
+{
+	static ULONGLONG Timer = 0;
+	ULONGLONG cur = GetTickCount64();
+	if(Timer == 0)
+		Timer = cur;
+	if(cur - Timer > 1000 / 120.0)
+	{
+		Timer = cur;
+		pController->next(&objects);
+		pDisplayer->render(&objects);
+	}
 }

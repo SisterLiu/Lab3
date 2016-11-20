@@ -2,38 +2,33 @@
 
 using namespace DirectX;
 
-void Dx11Displayer::render()
+void Dx11Displayer::render(std::vector<Object*>* pObjects)
 {
+	updateCamera();
+
+	//-------------------------------------
+	// Clear the back buffer
+	//-------------------------------------
+	pDx11DeviceContext->ClearRenderTargetView(pDx11RenderTargetView, Colors::WhiteSmoke);
+	pDx11DeviceContext->ClearDepthStencilView(pDx11DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 	// Initialize the view matrix
 	XMVECTOR Eye = eyePos;
-	XMVECTOR At = eyePos + eyeDirect;
+	XMVECTOR LookingAt = eyePos + eyeDirect;
 	XMVECTOR Up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-	g_View = XMMatrixLookAtLH(Eye, At, Up);
-	//
-	// Clear the back buffer
-	//
-	pDx11DeviceContext->ClearRenderTargetView(pDx11RenderTargetView, Colors::MidnightBlue);
-	pDx11DeviceContext->ClearDepthStencilView(pDx11DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	constantBuffer.mView = XMMatrixTranspose(XMMatrixLookAtLH(Eye, LookingAt, Up));
 
-	ConstantBuffer cb;
-	cb.mWorld = XMMatrixIdentity();
-	cb.mView = XMMatrixTranspose(g_View);
-	cb.mProjection = XMMatrixTranspose(g_Projection);
-	XMStoreFloat3(&cb.cameraPos, eyePos);
-	//XMStoreFloat3(&cb.lightPos, eyePos);
-	cb.lightPos = XMFLOAT3(10.0, 10.0, 10.0);
-	pDx11DeviceContext->UpdateSubresource(pDx11ConstantBuffer, 0, nullptr, &cb, 0, 0);
-
-	// Render
-	UINT stride = sizeof(MeshVertex);
-	UINT offset = 0;
-	pDx11DeviceContext->IASetVertexBuffers(0,1,&mesh->pDx11VertexBuffer, &stride, &offset);
-	pDx11DeviceContext->IASetIndexBuffer(mesh->pDx11IndexBuffer, DXGI_FORMAT_R32_UINT,0);
-	pDx11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	XMStoreFloat3(&constantBuffer.cameraPos, eyePos);
+	XMStoreFloat3(&constantBuffer.lightPos, eyePos);
+	constantBuffer.lightPos.y += 2;
+	pDx11DeviceContext->UpdateSubresource(pDx11ConstantBuffer, 0, nullptr, &constantBuffer, 0, 0);
 	pDx11DeviceContext->VSSetConstantBuffers(0, 1, &pDx11ConstantBuffer);
-
-	pDx11DeviceContext->DrawIndexed(mesh->numIndex, 0, 0);
+	pDx11DeviceContext->PSSetConstantBuffers(0, 1, &pDx11ConstantBuffer);
+	// Render
+	for(int i = 0; i < pObjects->size(); i++)
+	{
+		renderObject((*pObjects)[i]);
+	}
 	
 	//
 	// Present our back buffer to our front buffer
@@ -41,16 +36,69 @@ void Dx11Displayer::render()
 	pDx11SwapChain->Present(0, 0);
 }
 
-void Dx11Displayer::render60()
+void Dx11Displayer::renderObject(Object* pObject)
 {
-	static ULONGLONG Timer = 0;
-	ULONGLONG cur = GetTickCount64();
-	if(Timer == 0)
-		Timer = cur;
-	if(cur - Timer > 1000 / 120.0)
+	UINT stride = sizeof(MeshVertex);
+	UINT offset = 0;
+	pDx11DeviceContext->IASetVertexBuffers(0, 1, &pObject->pMesh->pDx11VertexBuffer, &stride, &offset);
+	pDx11DeviceContext->IASetIndexBuffer(pObject->pMesh->pDx11IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+	pDx11DeviceContext->IASetPrimitiveTopology(pObject->pMesh->layout);
+	pDx11DeviceContext->PSSetShaderResources(0,1,&pObject->pMesh->pDx11TextureView);
+	pDx11DeviceContext->DrawIndexed(pObject->pMesh->numIndex, 0, 0);
+}
+
+void Dx11Displayer::updateCamera()
+{
+	eyePos;
+	eyeDirect;
+	float speed = 0.1;
+	float rotation = 0.05;
+	XMVECTOR UP = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	XMVECTOR Left = XMVector3Cross(eyeDirect, UP);
+	XMVECTOR Front = XMVector3Cross(UP, Left);
+	Left = XMVector3Normalize(Left);
+	Front = XMVector3Normalize(Front);
+	eyeDirect = XMVector3Normalize(eyeDirect);
+
+	if(cameraControl.GO_UP)
 	{
-		Timer = cur;
-		render();
+		eyePos += speed* UP;
+	}
+	if(cameraControl.GO_DOWN)
+	{
+		eyePos -= speed* UP;
+	}
+	if(cameraControl.GO_LEFT)
+	{
+		eyePos += speed* Left;
+	}
+	if(cameraControl.GO_RIGHT)
+	{
+		eyePos -= speed* Left;
+	}
+	if(cameraControl.GO_FRONT)
+	{
+		eyePos += speed* Front;
+	}
+	if(cameraControl.GO_BACK)
+	{
+		eyePos -= speed* Front;
+	}
+	if(cameraControl.TRUN_UP)
+	{
+		eyeDirect = eyeDirect + XMVector4Normalize(XMVector3Cross(Left,eyeDirect)) *rotation*2;
+	}
+	if(cameraControl.TRUN_DOWN)
+	{
+		eyeDirect = eyeDirect - XMVector4Normalize(XMVector3Cross(Left, eyeDirect)) *rotation * 2;
+	}
+	if(cameraControl.TRUN_LEFT)
+	{
+		eyeDirect = XMVector4Transform(eyeDirect, XMMatrixTranspose(XMMatrixRotationY(rotation)));
+	}
+	if(cameraControl.TRUN_RIGHT)
+	{
+		eyeDirect = XMVector4Transform(eyeDirect, XMMatrixTranspose(XMMatrixRotationY(-rotation)));
 	}
 }
 
@@ -63,7 +111,10 @@ Dx11Displayer::Dx11Displayer(HWND hwnd)
 	UINT width = rc.right - rc.left;
 	UINT height = rc.bottom - rc.top;
 
-	// create the device
+	//-------------------------------------------------------------------------
+	//	Dx11 Device and Swap Chain
+	//-------------------------------------------------------------------------
+	// create the device describe
 	DXGI_SWAP_CHAIN_DESC swapChainDescribe;
 	ZeroMemory(&swapChainDescribe, sizeof(swapChainDescribe));
 	swapChainDescribe.BufferCount = 1;
@@ -82,6 +133,7 @@ Dx11Displayer::Dx11Displayer(HWND hwnd)
 	UINT               numLevelsRequested = 1;
 	D3D_FEATURE_LEVEL  FeatureLevelsSupported;
 
+	//	create & set the device
 	if(FAILED(hr = D3D11CreateDeviceAndSwapChain(NULL,
 		D3D_DRIVER_TYPE_HARDWARE,
 		NULL,
@@ -97,7 +149,9 @@ Dx11Displayer::Dx11Displayer(HWND hwnd)
 	{
 		return;
 	}
-
+	//-------------------------------------------------------------------------
+	//	Render Target View
+	//-------------------------------------------------------------------------
 	// Create a render target view
 	ID3D11Texture2D* pBackBuffer = nullptr;
 	hr = pDx11SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&pBackBuffer));
@@ -109,6 +163,9 @@ Dx11Displayer::Dx11Displayer(HWND hwnd)
 	if(FAILED(hr))
 		return;
 
+	//-------------------------------------------------------------------------
+	//	Depth Stencil
+	//-------------------------------------------------------------------------
 	// Create depth stencil texture
 	D3D11_TEXTURE2D_DESC descDepth;
 	ZeroMemory(&descDepth, sizeof(descDepth));
@@ -137,8 +194,15 @@ Dx11Displayer::Dx11Displayer(HWND hwnd)
 	if(FAILED(hr))
 		return;
 
+	//-------------------------------------------------------------------------
+	//	Set Render Target View & Depth Stencil View
+	//-------------------------------------------------------------------------
 	pDx11DeviceContext->OMSetRenderTargets(1, &pDx11RenderTargetView, pDx11DepthStencilView);
 
+
+	//-------------------------------------------------------------------------
+	//	Set View Port
+	//-------------------------------------------------------------------------
 	D3D11_VIEWPORT vp;
 	vp.Width = width;
 	vp.Height = height;
@@ -148,11 +212,13 @@ Dx11Displayer::Dx11Displayer(HWND hwnd)
 	vp.TopLeftY = 0;
 	pDx11DeviceContext->RSSetViewports(1, &vp);
 
-
+	//-------------------------------------------------------------------------
+	//	Vertex Shader
+	//-------------------------------------------------------------------------
 	ID3DBlob* pVSBlob = nullptr;
 
 	// Compile the vertex shader
-	hr = CompileShaderFromFile(L"shader.fx", "VS", "vs_4_0", &pVSBlob);
+	hr = CompileShaderFromFile(L"VertexShader.hlsl", "VS", "vs_4_0", &pVSBlob);
 	if(FAILED(hr))
 	{
 		MessageBox(nullptr,
@@ -171,8 +237,10 @@ Dx11Displayer::Dx11Displayer(HWND hwnd)
 	// Set the vertex shader
 	pDx11DeviceContext->VSSetShader(pDx11VertexShader, nullptr, 0);
 
+	//-------------------------------------------------------------------------
+	//	Input Layout base on Vertex Shader
+	//-------------------------------------------------------------------------
 	// Create the input layout
-	
 	hr = pDx11Device->CreateInputLayout(layout, 3, pVSBlob->GetBufferPointer(),
 		pVSBlob->GetBufferSize(), &pDx11VertexLayout);
 	pVSBlob->Release();
@@ -182,10 +250,12 @@ Dx11Displayer::Dx11Displayer(HWND hwnd)
 	// Set the input layout
 	pDx11DeviceContext->IASetInputLayout(pDx11VertexLayout);
 
-
+	//-------------------------------------------------------------------------
+	//	Pixel Shader
+	//-------------------------------------------------------------------------
 	// Compile the pixel shader
 	ID3DBlob* pPSBlob = nullptr;
-	hr = CompileShaderFromFile(L"shader.fx", "PS", "ps_4_0", &pPSBlob);
+	hr = CompileShaderFromFile(L"PixelShader.hlsl", "PS", "ps_4_0", &pPSBlob);
 	if(FAILED(hr))
 	{
 		MessageBox(nullptr,
@@ -202,6 +272,28 @@ Dx11Displayer::Dx11Displayer(HWND hwnd)
 	// Set the pixel shader
 	pDx11DeviceContext->PSSetShader(pDx11PixelShader, nullptr, 0);
 
+	//-------------------------------------------------------------------------
+	//	Vertex Texture Sampler
+	//-------------------------------------------------------------------------
+	D3D11_SAMPLER_DESC samplerDescribe;
+	ZeroMemory(&samplerDescribe,sizeof(samplerDescribe));
+	samplerDescribe.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+	samplerDescribe.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDescribe.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDescribe.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDescribe.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	samplerDescribe.MaxLOD = D3D11_FLOAT32_MAX;
+	samplerDescribe.MinLOD = 0;
+
+	//	Create SamplerState
+	pDx11Device->CreateSamplerState(&samplerDescribe,&pDx11SamplerState);
+
+	//	Set SamplerState
+	pDx11DeviceContext->PSSetSamplers(0, 1, &pDx11SamplerState);
+
+	//-------------------------------------------------------------------------
+	//	Constant Buffer
+	//-------------------------------------------------------------------------
 	D3D11_BUFFER_DESC bd;
 	ZeroMemory(&bd, sizeof(bd));
 
@@ -215,25 +307,33 @@ Dx11Displayer::Dx11Displayer(HWND hwnd)
 		return;
 
 	// Initialize the world matrix
-	g_World = XMMatrixIdentity();
+	constantBuffer.mWorld = XMMatrixIdentity();
 
 	// Initialize the view matrix
 	XMVECTOR Eye = XMVectorSet(0.0f, -10.0f, -10.0f, 0.0f);
-	XMVECTOR At = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
+	XMVECTOR LookingAt = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
 	XMVECTOR Up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-	g_View = XMMatrixLookAtLH(Eye, At, Up);
+	constantBuffer.mView = XMMatrixTranspose(XMMatrixLookAtLH(Eye, LookingAt, Up));
 
-	eyeDirect = At - Eye;
+	// Initialize the projection matrix
+	constantBuffer.mProjection = XMMatrixTranspose(XMMatrixPerspectiveFovLH(XM_PIDIV2, width / (FLOAT)height, 0.01f, 1000.0f));
+
+	//	
+	eyeDirect = LookingAt - Eye;
 	eyeDirect = XMVector4Normalize(eyeDirect);
 	eyePos = Eye;
-	// Initialize the projection matrix
-	g_Projection = XMMatrixPerspectiveFovLH(XM_PIDIV2, width / (FLOAT)height, 0.01f, 1000.0f);
 
-	Assimp::Importer importer;
-	const aiScene* pScene = importer.ReadFile("./model/bird.3ds", aiProcess_Triangulate);
-	const aiMesh* pMesh = pScene->mMeshes[0];
-	mesh = new Mesh(pDx11Device, pDx11DeviceContext, pMesh);
-
+	//	cameraControl
+	cameraControl.GO_UP = false;
+	cameraControl.GO_DOWN = false;
+	cameraControl.GO_LEFT = false;
+	cameraControl.GO_RIGHT = false;
+	cameraControl.GO_FRONT = false;
+	cameraControl.GO_BACK = false;
+	cameraControl.TRUN_UP = false;
+	cameraControl.TRUN_DOWN = false;
+	cameraControl.TRUN_LEFT = false;
+	cameraControl.TRUN_RIGHT = false;
 }
 
 Dx11Displayer::~Dx11Displayer()
@@ -248,6 +348,7 @@ Dx11Displayer::~Dx11Displayer()
 	if(pDx11PixelShader)		pDx11PixelShader->Release();
 	if(pDx11VertexLayout)		pDx11VertexLayout->Release();
 	if(pDx11ConstantBuffer)		pDx11ConstantBuffer->Release();
+	if(pDx11SamplerState)		pDx11SamplerState->Release();
 }
 
 //--------------------------------------------------------------------------------------

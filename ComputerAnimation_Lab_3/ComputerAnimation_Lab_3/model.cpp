@@ -30,7 +30,7 @@ Mesh::Mesh(ID3D11Device* pDevice, ID3D11DeviceContext* pDeviceContext, const aiM
 	}
 
 	//	Set vertex normal
-	if(pAiMesh->HasNormals)
+	if(pAiMesh->HasNormals())
 		for(int i = 0; i < numVertex; i++)
 		{
 			pVertexs[i].normal.x = pAiMesh->mNormals[i].x;
@@ -39,12 +39,12 @@ Mesh::Mesh(ID3D11Device* pDevice, ID3D11DeviceContext* pDeviceContext, const aiM
 		}
 
 	//	Set vertex texture coordinate
-	if(pAiMesh->HasTextureCoords)
-		for(int i = 0; i < numVertex; i++)
-		{
-			pVertexs[i].texture.x = pAiMesh->mTextureCoords[0][i].x;
-			pVertexs[i].texture.y = pAiMesh->mTextureCoords[0][i].y;
-		}
+	if(pAiMesh->HasTextureCoords(0))
+	for(int i = 0; i < numVertex; i++)
+	{
+		pVertexs[i].texture.x = pAiMesh->mTextureCoords[0][i].x;
+		pVertexs[i].texture.y = pAiMesh->mTextureCoords[0][i].y;
+	}
 
 	//------------------------------------------------------------------
 	//	Index

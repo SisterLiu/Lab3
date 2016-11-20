@@ -7,22 +7,42 @@
 
 struct ConstantBuffer
 {
-	XMMATRIX mWorld;
-	XMMATRIX mView;
-	XMMATRIX mProjection;
-	XMFLOAT3 cameraPos;
-	XMFLOAT3 lightPos;
+	DirectX::XMMATRIX mWorld;
+	DirectX::XMMATRIX mView;
+	DirectX::XMMATRIX mProjection;
+	DirectX::XMFLOAT3 cameraPos;
+	DirectX::XMFLOAT3 lightPos;
 };
 
+struct CameraControl
+{
+	bool GO_UP;
+	bool GO_LEFT;
+	bool GO_RIGHT;
+	bool GO_DOWN;
+	bool GO_FRONT;
+	bool GO_BACK;
+	bool TRUN_LEFT;
+	bool TRUN_RIGHT;
+	bool TRUN_DOWN;
+	bool TRUN_UP;
+};
 
 typedef class Dx11Displayer
 {
 	public:
-		void render();// render a frame
-		void render60();// render in 60fps
+		void render(std::vector<Object*>*);// render a frame
+		void renderObject(Object*);
 
 		Dx11Displayer(HWND);
 		~Dx11Displayer();
+
+		DirectX::XMVECTOR		eyePos;
+		DirectX::XMVECTOR		eyeDirect;
+		CameraControl			cameraControl;
+
+		ID3D11Device*			getDevice()	{return pDx11Device;}
+		ID3D11DeviceContext*	getContext(){return pDx11DeviceContext;}
 
 	private:
 		ID3D11Device*			pDx11Device;
@@ -35,8 +55,11 @@ typedef class Dx11Displayer
 		ID3D11PixelShader*      pDx11PixelShader;
 		ID3D11InputLayout*      pDx11VertexLayout;
 		ID3D11Buffer*           pDx11ConstantBuffer;
+		ID3D11SamplerState*		pDx11SamplerState;
+		ConstantBuffer			constantBuffer;
 
 		HRESULT CompileShaderFromFile(WCHAR* szFileName, LPCSTR szEntryPoint, LPCSTR szShaderModel, ID3DBlob** ppBlobOut);
+		void updateCamera();
 
 		D3D11_INPUT_ELEMENT_DESC layout[3] =
 		{
@@ -44,13 +67,5 @@ typedef class Dx11Displayer
 			{"TEXTURE", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
 			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		};
-
-		XMMATRIX                g_World;
-		XMMATRIX                g_View;
-		XMMATRIX                g_Projection;
-		XMVECTOR				eyePos;
-		XMVECTOR				eyeDirect;
-
-		Mesh* mesh;
 }DX11DISPLAYER, *PDX11DISPLAYER;
 

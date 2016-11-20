@@ -50,7 +50,7 @@ class Model
 class Object
 {
 	public:
-		Mesh mesh;
+		Mesh* pMesh;
 		DirectX::XMFLOAT3 pos;
 		DirectX::XMFLOAT3 angle;
 		float speed_x;
@@ -59,7 +59,4 @@ class Object
 		float rotation_x;
 		float rotation_y;
 		float rotation_z;
-	private:
-		ID3D11Device* pDx11Device;
-		ID3D11DeviceContext* pDx11DeviceContext;
 };
