@@ -11,6 +11,7 @@ struct VS_OUTPUT
 	float4 PosOld		: OLD_POSITION;
 	float2 TextureUV	: TUV;
 	float3 Normal		: NORMAL;
+	float2 UV			: MY_UV;
 };
 
 cbuffer ConstantBuffer : register(b0)
@@ -39,21 +40,22 @@ float4 PS(VS_OUTPUT input) : SV_Target
 	float3 L = normalize(Lp - P);
 	float3 N = normalize(input.Normal);
 	float3 V = normalize(Ep - P);
-	float3 R = 2* (L*N)*N-L;
+	float3 R = 2* dot(L,N)*N-L;
 
-	float3 cColor = textureFromFile.Sample(samplerState, input.TextureUV).xyz;
+	float3 cColor = textureFromFile.Sample(samplerState, input.UV).xyz;
+//	float3 cColor = textureFromFile.Sample(samplerState, input.TextureUV).xyz;
 //	float3 cColor = float3(1.0,0,0);
 
 	float diffuse,specular,ambient,iColor;
 
 	ambient = ka;
-	diffuse = max(0, L*N)*kd;
-	specular = R*V;
+	diffuse = max(0, dot(L,N))*kd;
+	specular = dot(R,V);
 	for(int i = 1; i < 5; i++)
 	{
-		specular = specular * (R*V);
+		specular = specular * dot(R,V);
 	}
-	specular = specular*ks;
+	specular = max(0, specular)*ks;
 
 	iColor = diffuse + specular + ambient;
 	

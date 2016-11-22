@@ -22,7 +22,10 @@ class WinProcedure
 		static Controller* pController;
 		static int screenX;
 		static int screenY;
+		
 		void render60();
+		Object* createObjectFromMesh(Mesh* pMesh, float x, float y, float z, float angleX, float angleY, float angleZ);
+
 		static std::vector<Object*> objects;
 };
 

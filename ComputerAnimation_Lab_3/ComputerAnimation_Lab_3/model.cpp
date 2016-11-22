@@ -19,15 +19,40 @@ Mesh::Mesh(ID3D11Device* pDevice, ID3D11DeviceContext* pDeviceContext, const aiM
 	unsigned int* pIndexs = new unsigned int[numIndex];
 	
 	//------------------------------------------------------------------
-	//	Vertex
+	//	Vertex & Collision Block
 	//------------------------------------------------------------------
+	float xMax, xMin, yMax, yMin, zMax, zMin;
+	xMax = yMax = zMax = FLT_MIN;
+	xMin = yMin = zMin = FLT_MAX;
+
 	//	Set vertex position
 	for(int i = 0; i < numVertex; i++)
 	{
 		pVertexs[i].pos.x = pAiMesh->mVertices[i].x;
 		pVertexs[i].pos.y = pAiMesh->mVertices[i].y;
 		pVertexs[i].pos.z = pAiMesh->mVertices[i].z;
+		if(pVertexs[i].pos.x < xMin)
+			xMin = pVertexs[i].pos.x;
+		if(pVertexs[i].pos.y < yMin)
+			yMin = pVertexs[i].pos.y;
+		if(pVertexs[i].pos.z < zMin)
+			zMin = pVertexs[i].pos.z;
+		if(pVertexs[i].pos.x > xMax)
+			xMax = pVertexs[i].pos.x;
+		if(pVertexs[i].pos.y > yMax)
+			yMax = pVertexs[i].pos.y;
+		if(pVertexs[i].pos.z > zMax)
+			zMax = pVertexs[i].pos.z;
 	}
+
+	//	Set Collision
+	collision.center.x = (xMax + xMin) / 2;
+	collision.center.y = (yMax + yMin) / 2;
+	collision.center.z = (zMax + zMin) / 2;
+	collision.x = xMax - collision.center.x;
+	collision.y = yMax - collision.center.y;
+	collision.z = zMax - collision.center.z;
+	collision.type = CollisionBlock::SPHERE;
 
 	//	Set vertex normal
 	if(pAiMesh->HasNormals())
@@ -129,6 +154,9 @@ void Mesh::readTextureFromFile(LPWSTR file)
 
 
 
+//---------------------------------------------------------------------------
+//	Class Model
+//---------------------------------------------------------------------------
 
 
 
@@ -139,7 +167,7 @@ void Mesh::readTextureFromFile(LPWSTR file)
 
 
 //---------------------------------------------------------------------------
-//	Class Model
+//	Class Object
 //---------------------------------------------------------------------------
 
 

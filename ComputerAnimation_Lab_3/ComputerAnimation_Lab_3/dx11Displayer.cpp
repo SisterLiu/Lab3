@@ -2,10 +2,13 @@
 
 using namespace DirectX;
 
+#define PI 3.14159265359f
+#define R(x) (x * PI / 180.0f)
+
 void Dx11Displayer::render(std::vector<Object*>* pObjects)
 {
-	updateCamera();
-
+	//updateCamera();
+	updateCamera2((*pObjects)[1]);
 	//-------------------------------------
 	// Clear the back buffer
 	//-------------------------------------
@@ -18,18 +21,18 @@ void Dx11Displayer::render(std::vector<Object*>* pObjects)
 	XMVECTOR Up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 	constantBuffer.mView = XMMatrixTranspose(XMMatrixLookAtLH(Eye, LookingAt, Up));
 
-	XMStoreFloat3(&constantBuffer.cameraPos, eyePos);
-	XMStoreFloat3(&constantBuffer.lightPos, eyePos);
-	constantBuffer.lightPos.y += 2;
-	pDx11DeviceContext->UpdateSubresource(pDx11ConstantBuffer, 0, nullptr, &constantBuffer, 0, 0);
-	pDx11DeviceContext->VSSetConstantBuffers(0, 1, &pDx11ConstantBuffer);
-	pDx11DeviceContext->PSSetConstantBuffers(0, 1, &pDx11ConstantBuffer);
+	constantBuffer.cameraPos = eyePos;
+	constantBuffer.lightPos = XMVectorSet(0.0f, 10.0f, 0.0f, 0.0f);
+	//constantBuffer.lightPos = eyePos;
+	
 	// Render
 	for(int i = 0; i < pObjects->size(); i++)
 	{
 		renderObject((*pObjects)[i]);
 	}
 	
+	
+
 	//
 	// Present our back buffer to our front buffer
 	//
@@ -38,6 +41,11 @@ void Dx11Displayer::render(std::vector<Object*>* pObjects)
 
 void Dx11Displayer::renderObject(Object* pObject)
 {
+	constantBuffer.mWorld = getWorldMatrixFromObject(pObject);
+	pDx11DeviceContext->UpdateSubresource(pDx11ConstantBuffer, 0, nullptr, &constantBuffer, 0, 0);
+	pDx11DeviceContext->VSSetConstantBuffers(0, 1, &pDx11ConstantBuffer);
+	pDx11DeviceContext->PSSetConstantBuffers(0, 1, &pDx11ConstantBuffer);
+
 	UINT stride = sizeof(MeshVertex);
 	UINT offset = 0;
 	pDx11DeviceContext->IASetVertexBuffers(0, 1, &pObject->pMesh->pDx11VertexBuffer, &stride, &offset);
@@ -47,12 +55,51 @@ void Dx11Displayer::renderObject(Object* pObject)
 	pDx11DeviceContext->DrawIndexed(pObject->pMesh->numIndex, 0, 0);
 }
 
+XMMATRIX Dx11Displayer::getWorldMatrixFromObject(Object* pObject)
+{
+	XMMATRIX posM;
+	XMFLOAT3 pos;
+
+	pos.x = pObject->pos.x - pObject->pMesh->collision.center.x;
+	pos.y = pObject->pos.y - pObject->pMesh->collision.center.y;
+	pos.z = pObject->pos.z - pObject->pMesh->collision.center.z;
+
+	posM.r[0] = XMVectorSet(1.0f, 0.0f, 0.0f, pos.x);
+	posM.r[1] = XMVectorSet(0.0f, 1.0f, 0.0f, pos.y);
+	posM.r[2] = XMVectorSet(0.0f, 0.0f, 1.0f, pos.z);
+	posM.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+	XMMATRIX angleM = XMMatrixIdentity();
+
+	XMFLOAT3 angleEular = pObject->angle;
+	XMMATRIX eularM;
+	//x rotate
+	eularM.r[0] = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+	eularM.r[1] = XMVectorSet(0.0f, cos(R(angleEular.x)), -sin(R(angleEular.x)), 0.0f);
+	eularM.r[2] = XMVectorSet(0.0f, sin(R(angleEular.x)), cos(R(angleEular.x)), 0.0f);
+	eularM.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+	angleM = angleM * eularM;
+	//y rotate
+	eularM.r[0] = XMVectorSet(cos(R(angleEular.y)), 0.0f, sin(R(angleEular.y)), 0.0f);
+	eularM.r[1] = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	eularM.r[2] = XMVectorSet(-sin(R(angleEular.y)), 0.0f, cos(R(angleEular.y)), 0.0f);
+	eularM.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+	angleM = angleM * eularM;
+	//z rotate
+	eularM.r[0] = XMVectorSet(cos(R(angleEular.z)), -sin(R(angleEular.z)), 0.0f, 0.0f);
+	eularM.r[1] = XMVectorSet(sin(R(angleEular.z)), cos(R(angleEular.z)), 0.0f, 0.0f);
+	eularM.r[2] = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+	eularM.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+	angleM = angleM * eularM;
+
+	return posM*angleM;
+}
+
 void Dx11Displayer::updateCamera()
 {
 	eyePos;
 	eyeDirect;
 	float speed = 0.1;
-	float rotation = 0.05;
+	float rotation = 0.02;
 	XMVECTOR UP = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 	XMVECTOR Left = XMVector3Cross(eyeDirect, UP);
 	XMVECTOR Front = XMVector3Cross(UP, Left);
@@ -100,6 +147,86 @@ void Dx11Displayer::updateCamera()
 	{
 		eyeDirect = XMVector4Transform(eyeDirect, XMMatrixTranspose(XMMatrixRotationY(-rotation)));
 	}
+}
+
+void Dx11Displayer::updateCamera2(Object* pObject)
+{
+	eyePos;
+	eyeDirect;
+	float speed = 0.002;
+	float rotation = 0.02;
+	XMVECTOR UP = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	XMVECTOR Left = XMVector3Cross(eyeDirect, UP);
+	XMVECTOR Front = XMVector3Cross(UP, Left);
+	Left = XMVector3Normalize(Left);
+	Front = XMVector3Normalize(Front);
+	eyeDirect = XMVector3Normalize(eyeDirect);
+
+	DirectX::XMFLOAT3 userForce = {0,0,0};
+	XMVECTOR userForceV = XMVectorSet(0,0,0,0);;
+
+	if(cameraControl.GO_UP)
+	{
+		userForceV += UP*0.007;
+	}
+	if(cameraControl.GO_DOWN)
+	{
+		eyePos -= speed* UP;
+	}
+	if(cameraControl.GO_LEFT)
+	{
+		userForceV += speed* Left;
+	}
+	if(cameraControl.GO_RIGHT)
+	{
+		userForceV -= speed* Left;
+	}
+	if(cameraControl.GO_FRONT)
+	{
+		userForceV += speed* Front;
+	}
+	if(cameraControl.GO_BACK)
+	{
+		userForceV -= speed* Front;
+	}
+	if(cameraControl.TRUN_UP)
+	{
+		eyeDirect = eyeDirect + XMVector4Normalize(XMVector3Cross(Left, eyeDirect)) *rotation * 2;
+	}
+	if(cameraControl.TRUN_DOWN)
+	{
+		eyeDirect = eyeDirect - XMVector4Normalize(XMVector3Cross(Left, eyeDirect)) *rotation * 2;
+	}
+	if(cameraControl.TRUN_LEFT)
+	{
+		eyeDirect = XMVector4Transform(eyeDirect, XMMatrixTranspose(XMMatrixRotationY(rotation)));
+	}
+	if(cameraControl.TRUN_RIGHT)
+	{
+		eyeDirect = XMVector4Transform(eyeDirect, XMMatrixTranspose(XMMatrixRotationY(-rotation)));
+	}
+
+	XMStoreFloat3(&userForce,userForceV);
+	bool hasUserForce = false;
+	for(int i = 0; i < pObject->motion.forces.size(); i++)
+	{
+		if(pObject->motion.forces[i].Flag == Force::USER)
+		{
+			pObject->motion.forces[i].direction = userForce;
+			hasUserForce = true;
+		}
+	}
+
+	if(!hasUserForce)
+	{
+		Force force;
+		force.direction = userForce;
+		force.Flag = Force::USER;
+		pObject->motion.forces.push_back(force);
+	}
+
+	eyeDirect = XMVector3Normalize(eyeDirect);
+	eyePos = XMLoadFloat3(&pObject->pos) - 10 * eyeDirect;
 }
 
 Dx11Displayer::Dx11Displayer(HWND hwnd)
@@ -277,12 +404,12 @@ Dx11Displayer::Dx11Displayer(HWND hwnd)
 	//-------------------------------------------------------------------------
 	D3D11_SAMPLER_DESC samplerDescribe;
 	ZeroMemory(&samplerDescribe,sizeof(samplerDescribe));
-	samplerDescribe.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+	samplerDescribe.Filter = D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR;
 	samplerDescribe.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 	samplerDescribe.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 	samplerDescribe.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
 	samplerDescribe.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDescribe.MaxLOD = D3D11_FLOAT32_MAX;
+	samplerDescribe.MaxLOD = 5;
 	samplerDescribe.MinLOD = 0;
 
 	//	Create SamplerState
@@ -310,8 +437,8 @@ Dx11Displayer::Dx11Displayer(HWND hwnd)
 	constantBuffer.mWorld = XMMatrixIdentity();
 
 	// Initialize the view matrix
-	XMVECTOR Eye = XMVectorSet(0.0f, -10.0f, -10.0f, 0.0f);
-	XMVECTOR LookingAt = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
+	XMVECTOR Eye = XMVectorSet(10.0f, 5.0f, 0.0f, 0.0f);
+	XMVECTOR LookingAt = XMVectorSet(0.0f, -5.0f, 0.0f, 0.0f);
 	XMVECTOR Up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 	constantBuffer.mView = XMMatrixTranspose(XMMatrixLookAtLH(Eye, LookingAt, Up));
 

@@ -23,6 +23,7 @@ struct VS_OUTPUT
 	float4 PosOld		: OLD_POSITION;
 	float2 TextureUV	: TUV;
 	float3 Normal		: NORMAL;
+	float2 UV			: MY_UV;
 };
 
 //--------------------------------------------------------------------------------------
@@ -32,11 +33,12 @@ VS_OUTPUT VS(float4 Pos : POSITION, float2 Tex : TEXTURE, float3 Normal : NORMAL
 {
 	VS_OUTPUT output = (VS_OUTPUT)0;
 	output.Pos = mul(Pos, World);
+	output.PosOld = output.Pos;
 	output.Pos = mul(output.Pos, View);
 	output.Pos = mul(output.Pos, Projection);
-	output.PosOld = Pos;
 	output.TextureUV = Tex;
-	output.Normal = Normal;
+	output.Normal = mul(Normal, World);
+	output.UV = Pos.xz;
 	return output;
 }
 

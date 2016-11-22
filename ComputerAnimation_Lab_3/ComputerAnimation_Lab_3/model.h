@@ -17,6 +17,19 @@ struct MeshVertex
 	DirectX::XMFLOAT3 normal;
 };
 
+class CollisionBlock
+{
+	public:
+		DirectX::XMFLOAT3 center;
+		// length to the center, it is R ,not H
+		float x;
+		float y;
+		float z;
+		unsigned int type;
+		static const unsigned int SPHERE = 0x01;
+		static const unsigned int RECT = 0x02;
+};
+
 class Mesh
 {
 	public:
@@ -31,6 +44,8 @@ class Mesh
 		DirectX::XMFLOAT3 angle;
 		std::vector<Mesh> child;
 		D3D_PRIMITIVE_TOPOLOGY layout = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+		CollisionBlock collision;
 
 		Mesh(ID3D11Device*, ID3D11DeviceContext*, const aiMesh*);
 		~Mesh();
@@ -47,16 +62,48 @@ class Model
 
 };
 
+class Force
+{
+	public:
+		DirectX::XMFLOAT3 direction;
+		DirectX::XMFLOAT3 position;
+		unsigned int Flag;
+
+		Force() :direction(0,0,0),position(0,0,0),Flag(COLLISION)
+		{}
+
+		static const unsigned int USER = 0x01;
+		static const unsigned int SUSPEND = 0x02;
+		static const unsigned int COLLISION = 0x04;
+};
+
+class Motion
+{
+	public:
+		DirectX::XMFLOAT3 speed;
+		DirectX::XMFLOAT3 rotation;
+		DirectX::XMFLOAT3 gravity;
+		float mess;
+		Motion():speed(0,0,0),rotation(0,0,0),gravity(0,-0.01,0), mess(1)
+		{}
+
+		std::vector<Force> forces;
+};
+
 class Object
 {
 	public:
 		Mesh* pMesh;
 		DirectX::XMFLOAT3 pos;
 		DirectX::XMFLOAT3 angle;
-		float speed_x;
-		float speed_y;
-		float speed_z;
-		float rotation_x;
-		float rotation_y;
-		float rotation_z;
+		Motion motion;
+		unsigned int Flag;
+		int id;
+
+		static const unsigned int GROUND = 0x00;
+		static const unsigned int WALL = 0x01;
+		static const unsigned int BALL = 0x02;
+
+		Object():Flag(BALL)
+		{};
 };

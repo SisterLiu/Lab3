@@ -10,8 +10,8 @@ struct ConstantBuffer
 	DirectX::XMMATRIX mWorld;
 	DirectX::XMMATRIX mView;
 	DirectX::XMMATRIX mProjection;
-	DirectX::XMFLOAT3 cameraPos;
-	DirectX::XMFLOAT3 lightPos;
+	DirectX::XMVECTOR cameraPos;
+	DirectX::XMVECTOR lightPos;
 };
 
 struct CameraControl
@@ -60,6 +60,8 @@ typedef class Dx11Displayer
 
 		HRESULT CompileShaderFromFile(WCHAR* szFileName, LPCSTR szEntryPoint, LPCSTR szShaderModel, ID3DBlob** ppBlobOut);
 		void updateCamera();
+		void updateCamera2(Object*);
+		DirectX::XMMATRIX getWorldMatrixFromObject(Object*);
 
 		D3D11_INPUT_ELEMENT_DESC layout[3] =
 		{
