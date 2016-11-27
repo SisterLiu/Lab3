@@ -1,8 +1,0 @@
-﻿  winProcedure.cpp
-c:\users\liu\desktop\computer animation\lab3\computeranimation_lab_3\computeranimation_lab_3\model.h(88): warning C4305: “参数”: 从“double”到“float”截断
-c:\users\liu\desktop\computer animation\lab3\computeranimation_lab_3\computeranimation_lab_3\winprocedure.cpp(164): warning C4244: “参数”: 从“int”转换到“float”，可能丢失数据
-c:\users\liu\desktop\computer animation\lab3\computeranimation_lab_3\computeranimation_lab_3\winprocedure.cpp(166): warning C4305: “=”: 从“double”到“float”截断
-c:\users\liu\desktop\computer animation\lab3\computeranimation_lab_3\computeranimation_lab_3\winprocedure.cpp(167): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
-c:\users\liu\desktop\computer animation\lab3\computeranimation_lab_3\computeranimation_lab_3\winprocedure.cpp(168): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
-c:\users\liu\desktop\computer animation\lab3\computeranimation_lab_3\computeranimation_lab_3\winprocedure.cpp(169): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
-  ComputerAnimation_Lab_3.vcxproj -> C:\Users\liu\Desktop\Computer Animation\Lab3\ComputerAnimation_Lab_3\Debug\ComputerAnimation_Lab_3.exe

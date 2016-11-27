@@ -14,7 +14,7 @@ void Dx11Displayer::render(std::vector<Object*>* pObjects)
 	//-------------------------------------
 	pDx11DeviceContext->ClearRenderTargetView(pDx11RenderTargetView, Colors::WhiteSmoke);
 	pDx11DeviceContext->ClearDepthStencilView(pDx11DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
-
+	
 	// Initialize the view matrix
 	XMVECTOR Eye = eyePos;
 	XMVECTOR LookingAt = eyePos + eyeDirect;
